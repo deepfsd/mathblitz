@@ -9,13 +9,13 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
+    "noEmit": true, // Keep this true
     "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "composite": true // Add this line
+    "composite": true 
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
