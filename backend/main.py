@@ -1,16 +1,24 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 from pydantic import BaseModel
+load_dotenv()
 import random
 import os
 
 app = FastAPI()
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
+# Get the URL from .env, fallback to localhost if not found
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+# We create a list from the environment variable
+# If you have multiple URLs, you can separate them by commas in .env
+
+origins = [url.strip() for url in frontend_url.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
