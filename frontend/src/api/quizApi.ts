@@ -1,52 +1,57 @@
-import axios from 'axios';
-import { Question, PerformanceLog, AnswerResult } from '../types/quiz';
+import axios from "axios";
+import { QuizConfig, PerformanceLog } from "../types/quiz";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-const apiClient = axios.create({
-  baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const HISTORY_KEY = "mathblitz_history";
 
 export const quizApi = {
-  getQuestion: async (start: number, end: number): Promise<Question> => {
-    const response = await apiClient.get<Question>(`/question`, {
-      params: { start, end },
-    });
-    return response.data;
+  getQuestion: async (config: QuizConfig) => {
+    try {
+      if (config.mode === "addition") {
+        // Now passes single 'digits' parameter
+        const response = await axios.get(
+          `${API_URL}/question/addition?digits=${config.addDigits}&terms=${config.addTermCount}`,
+        );
+        return response.data;
+      } else {
+        const response = await axios.get(
+          `${API_URL}/question/multiplication?start=${config.startTable}&end=${config.endTable}`,
+        );
+        return response.data;
+      }
+    } catch (error) {
+      console.error("API Error fetching question:", error);
+      throw error;
+    }
   },
 
-  checkAnswer: async (payload: { num1: number; num2: number; user_answer: number }) => {
-    const response = await apiClient.post(`/check`, payload);
-    return response.data;
-  },
-
-  logPerformance: (question: string, timeTaken: number, result: AnswerResult) => {
-    let history: PerformanceLog[] = JSON.parse(localStorage.getItem('quiz_performance') || '[]');
-    
-    // Logic: Remove existing entry for this question if it exists, so we can push the new result
-    // This ensures we don't have duplicates and always have the latest status
-    history = history.filter(item => item.question !== question);
-    
-    const newEntry: PerformanceLog = {
-      id: crypto.randomUUID(),
-      question,
-      timeTaken: parseFloat(timeTaken.toFixed(2)),
-      date: new Date().toLocaleDateString(),
-      result,
-    };
-
-    // Add to end (we will reverse it in UI to show latest first)
-    history.push(newEntry);
-
-    localStorage.setItem('quiz_performance', JSON.stringify(history));
+  checkAnswer: async (numbers: number[], answer: number, mode: string) => {
+    try {
+      // Sends the array of numbers to the backend
+      const response = await axios.post(`${API_URL}/check?mode=${mode}`, {
+        numbers,
+        user_answer: answer,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("API Error checking answer:", error);
+      throw error;
+    }
   },
 
   getHistory: (): PerformanceLog[] => {
-    return JSON.parse(localStorage.getItem('quiz_performance') || '[]');
+    const data = localStorage.getItem(HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveHistory: (log: PerformanceLog) => {
+    const history = quizApi.getHistory();
+    const updated = [...history, log];
+    if (updated.length > 50) updated.shift();
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   },
 
   clearHistory: () => {
-    localStorage.removeItem('quiz_performance');
-  }
+    localStorage.removeItem(HISTORY_KEY);
+  },
 };
