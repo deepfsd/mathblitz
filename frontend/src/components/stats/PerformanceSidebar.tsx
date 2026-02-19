@@ -12,7 +12,6 @@ export const PerformanceSidebar: React.FC<Props> = ({ history, onClear }) => {
 
   return (
     <div className="space-y-6">
-      {/* Mistakes Card */}
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -44,7 +43,6 @@ export const PerformanceSidebar: React.FC<Props> = ({ history, onClear }) => {
         </div>
       </div>
 
-      {/* Slow Wins Card */}
       {slowWins.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 animate-fade-in-up">
           <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">

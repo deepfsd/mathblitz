@@ -3,7 +3,6 @@ import React from 'react';
 export const ComingSoonCard: React.FC = () => {
   return (
     <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group border border-slate-800">
-      {/* Background Effects */}
       <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-indigo-600 rounded-full opacity-20 blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
       <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-purple-600 rounded-full opacity-20 blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
       
@@ -36,7 +35,6 @@ export const ComingSoonCard: React.FC = () => {
           </div>
         </div>
 
-        {/* --- UPDATED ITEM HERE --- */}
         <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
           <div className="p-2 bg-blue-500/20 text-blue-300 rounded-lg">➖</div>
           <div>

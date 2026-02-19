@@ -1,21 +1,20 @@
-import axios from "axios";
-import { QuizConfig, PerformanceLog } from "../types/quiz";
+import axios from 'axios';
+import { QuizConfig, PerformanceLog } from '../types/quiz';
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const HISTORY_KEY = "mathblitz_history";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const HISTORY_KEY = 'mathblitz_history';
 
 export const quizApi = {
   getQuestion: async (config: QuizConfig) => {
     try {
-      if (config.mode === "addition") {
-        // Now passes single 'digits' parameter
+      if (config.mode === 'addition') {
         const response = await axios.get(
-          `${API_URL}/question/addition?digits=${config.addDigits}&terms=${config.addTermCount}`,
+          `${API_URL}/question/addition?digits=${config.addDigits}&terms=${config.addTermCount}`
         );
         return response.data;
       } else {
         const response = await axios.get(
-          `${API_URL}/question/multiplication?start=${config.startTable}&end=${config.endTable}`,
+          `${API_URL}/question/multiplication?start=${config.startTable}&end=${config.endTable}`
         );
         return response.data;
       }
@@ -27,10 +26,9 @@ export const quizApi = {
 
   checkAnswer: async (numbers: number[], answer: number, mode: string) => {
     try {
-      // Sends the array of numbers to the backend
       const response = await axios.post(`${API_URL}/check?mode=${mode}`, {
         numbers,
-        user_answer: answer,
+        user_answer: answer
       });
       return response.data;
     } catch (error) {
@@ -53,5 +51,5 @@ export const quizApi = {
 
   clearHistory: () => {
     localStorage.removeItem(HISTORY_KEY);
-  },
+  }
 };

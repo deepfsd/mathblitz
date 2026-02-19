@@ -21,10 +21,9 @@ app.add_middleware(
 )
 
 class AnswerRequest(BaseModel):
-    numbers: list[int]  # Now accepts an array of numbers
+    numbers: list[int]
     user_answer: int
 
-# --- MULTIPLICATION ENDPOINT ---
 @app.get("/question/multiplication")
 def get_multiplication(start: int = 2, end: int = 12):
     if start > end:
@@ -44,14 +43,11 @@ def get_multiplication(start: int = 2, end: int = 12):
     
     return {"numbers": [num1, num2], "operator": "×", "options": final_options}
 
-# --- ADDITION ENDPOINT ---
 @app.get("/question/addition")
 def get_addition(digits: int = 2, terms: int = 2):
-    # Calculate the range based on the number of digits
     min_val = 1 if digits == 1 else 10**(digits - 1)
     max_val = (10**digits) - 1
     
-    # Generate all numbers using the same digit constraint
     numbers = [random.randint(min_val, max_val) for _ in range(terms)]
     
     correct_answer = sum(numbers)
@@ -71,7 +67,6 @@ def get_addition(digits: int = 2, terms: int = 2):
     random.shuffle(final_options)
     
     return {"numbers": numbers, "operator": "+", "options": final_options}
-
 
 @app.post("/check")
 def check_answer(data: AnswerRequest, mode: str = "multiplication"):

@@ -107,7 +107,6 @@ export const useQuiz = () => {
     }
   };
 
-  // --- 1. THE TIMER: Only handles counting down ---
   useEffect(() => {
     if (state.status !== 'active' || state.feedback !== 'none') return;
 
@@ -118,7 +117,6 @@ export const useQuiz = () => {
           return prev;
         }
 
-        // When time hits 0, just change the state. Don't save history here!
         if (prev.timeLeft <= 1) {
           clearInterval(timer);
           return { ...prev, timeLeft: 0, feedback: 'timeout', streak: 0 };
@@ -131,13 +129,10 @@ export const useQuiz = () => {
     return () => clearInterval(timer);
   }, [state.status, state.feedback]);
 
-
-  // --- 2. TIMEOUT HANDLER: Triggers once when the state becomes 'timeout' ---
   useEffect(() => {
     if (state.status === 'active' && state.feedback === 'timeout' && state.currentQuestion) {
       const operator = config.mode === 'addition' ? '+' : '×';
       
-      // Save history safely outside of the setState callback
       quizApi.saveHistory({
         id: Date.now().toString(),
         question: state.currentQuestion.numbers.join(` ${operator} `),
@@ -146,7 +141,6 @@ export const useQuiz = () => {
         date: new Date().toLocaleDateString('en-GB')
       });
 
-      // Move to next question after a brief delay so user sees "Time's Up"
       const t = setTimeout(() => {
         setState(p => {
           if (p.status === 'idle') return p; 

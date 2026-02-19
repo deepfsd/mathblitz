@@ -14,7 +14,6 @@ export const QuizCard: React.FC<Props> = ({ state, config, onSubmit, onQuit }) =
 
   const operatorSymbol = config.mode === 'addition' ? '+' : '×';
   
-  // Dynamically calculate the sum or product of the entire array for the feedback text
   const correctFeedbackAnswer = currentQuestion 
     ? (config.mode === 'addition' 
         ? currentQuestion.numbers.reduce((acc, curr) => acc + curr, 0) 
@@ -75,13 +74,10 @@ export const QuizCard: React.FC<Props> = ({ state, config, onSubmit, onQuit }) =
         </div>
 
         <div className="p-8 pb-10">
-          
-          {/* Dynamic Map for Numbers */}
           <div className="flex flex-wrap justify-center items-end gap-3 mb-12 mt-4">
             {currentQuestion.numbers.map((num, idx) => (
               <React.Fragment key={idx}>
                 <div className="text-6xl font-bold text-slate-800 tracking-tighter">{num}</div>
-                {/* Don't show the operator after the final number */}
                 {idx < currentQuestion.numbers.length - 1 && (
                   <div className="text-4xl font-medium text-slate-300 mb-2">{operatorSymbol}</div>
                 )}

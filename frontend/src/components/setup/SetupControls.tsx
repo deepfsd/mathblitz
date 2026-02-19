@@ -9,7 +9,6 @@ interface Props {
 export const SetupControls: React.FC<Props> = ({ timePerQuestion, totalQuestions, onChange }) => {
   return (
     <div className="space-y-8 pt-4">
-      {/* Time Limit */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Time per Question</label>
@@ -31,7 +30,6 @@ export const SetupControls: React.FC<Props> = ({ timePerQuestion, totalQuestions
         </div>
       </div>
 
-      {/* Questions Count */}
       <div>
         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 block">Session Length</label>
         <div className="grid grid-cols-4 gap-3">
