@@ -8,3 +8,11 @@
     scrollbar-width: none;  /* Firefox */
   }
 }
+@media (hover: hover) and (pointer: fine) {
+  .desktop-grab {
+    cursor: grab;
+  }
+  .desktop-grab:active {
+    cursor: grabbing;
+  }
+}

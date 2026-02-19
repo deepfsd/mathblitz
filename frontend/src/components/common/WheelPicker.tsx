@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react';
 
+// SINGLETON AUDIO CONTEXT
 let audioCtx: AudioContext | null = null;
 
 const playIOSClick = () => {
@@ -48,7 +49,13 @@ export const WheelPicker: React.FC<Props> = ({ label, value, min, max, onChange 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isInitialMount = useRef(true);
   
+  // 1. LOCAL STATE FOR 60FPS SCROLLING
+  // This prevents the whole app from re-rendering while spinning
+  const [localValue, setLocalValue] = useState(value);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  
   const isDragging = useRef(false);
+  const hasDragged = useRef(false);
   const startY = useRef(0);
   const startScrollTop = useRef(0);
   
@@ -65,13 +72,31 @@ export const WheelPicker: React.FC<Props> = ({ label, value, min, max, onChange 
     const index = Math.round(scrollTop / ITEM_HEIGHT);
     const newValue = range[index];
     
-    if (newValue !== undefined && newValue !== value) {
-      onChange(newValue);
+    if (newValue !== undefined && newValue !== localValue) {
+      setLocalValue(newValue); // Update UI instantly
+      
       if (!isInitialMount.current) {
         playIOSClick();
       }
+
+      // Debounce the parent update so the app doesn't lag while spinning
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(() => {
+        onChange(newValue);
+      }, 150); // Only tell the parent the new value 150ms after the wheel stops
     }
-  }, [range, value, onChange]);
+  }, [range, localValue, onChange]);
+
+  // Sync if parent changes value externally
+  useEffect(() => {
+    if (value !== localValue && !isDragging.current) {
+      setLocalValue(value);
+      if (scrollRef.current) {
+        const index = range.indexOf(value);
+        scrollRef.current.scrollTo({ top: index * ITEM_HEIGHT, behavior: 'smooth' });
+      }
+    }
+  }, [value, range]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -82,24 +107,49 @@ export const WheelPicker: React.FC<Props> = ({ label, value, min, max, onChange 
     }
   }, []); 
 
+  // --- 2. POINTER CAPTURE LOGIC FOR DESKTOP ---
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return; 
     if (!scrollRef.current) return;
+    
+    // Captures the mouse so dragging works even if the cursor leaves the box!
+    scrollRef.current.setPointerCapture(e.pointerId);
+    
     isDragging.current = true;
+    hasDragged.current = false;
     startY.current = e.clientY;
     startScrollTop.current = scrollRef.current.scrollTop;
     scrollRef.current.style.scrollSnapType = 'none';
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging.current || !scrollRef.current) return;
+    if (e.pointerType === 'touch' || !isDragging.current || !scrollRef.current) return;
+    
     const distanceMoved = e.clientY - startY.current;
+    if (Math.abs(distanceMoved) > 3) {
+      hasDragged.current = true; 
+    }
+    
     scrollRef.current.scrollTop = startScrollTop.current - distanceMoved;
   };
 
-  const handlePointerUpOrLeave = () => {
-    if (!isDragging.current || !scrollRef.current) return;
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch' || !isDragging.current || !scrollRef.current) return;
+    
+    scrollRef.current.releasePointerCapture(e.pointerId);
     isDragging.current = false;
     scrollRef.current.style.scrollSnapType = 'y mandatory';
+  };
+
+  const handleItemClick = (num: number) => {
+    if (hasDragged.current) return; 
+    if (!scrollRef.current) return;
+    
+    const index = range.indexOf(num);
+    scrollRef.current.scrollTo({
+      top: index * ITEM_HEIGHT,
+      behavior: 'smooth'
+    });
   };
 
   return (
@@ -114,17 +164,20 @@ export const WheelPicker: React.FC<Props> = ({ label, value, min, max, onChange 
           onScroll={handleScroll}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUpOrLeave}
-          onPointerLeave={handlePointerUpOrLeave}
-          className="h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar py-[48px] scroll-smooth cursor-grab active:cursor-grabbing"
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ touchAction: 'pan-y' }}
+          className="h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar py-[48px] scroll-smooth desktop-grab"
         >
           {range.map((num) => (
             <div 
               key={num}
-              className={`h-[48px] flex items-center justify-center font-black text-2xl snap-center transition-all duration-150 ${
-                value === num 
+              onClick={() => handleItemClick(num)} 
+              // 3. OPTIMIZED TRANSITIONS: Faster duration so numbers pop instantly without motion blur
+              className={`h-[48px] flex items-center justify-center font-black text-2xl snap-center transition-all duration-75 cursor-pointer ${
+                localValue === num 
                   ? 'text-indigo-600 scale-110 opacity-100' 
-                  : 'text-slate-400 scale-90 opacity-40'
+                  : 'text-slate-400 scale-90 opacity-40 hover:text-slate-500 hover:opacity-60'
               }`}
             >
               {num}
