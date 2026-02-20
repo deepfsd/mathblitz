@@ -1,67 +1,59 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuiz } from './hooks/useQuiz';
-import { SetupScreen } from './components/SetupScreen';
-import { QuizCard } from './components/QuizCard';
+import { Dashboard } from './components/dashboard/Dashboard';
+import { QuizArena } from './components/quiz/QuizArena';
 
 const App: React.FC = () => {
   const { config, setConfig, state, startQuiz, submitAnswer, quitQuiz } = useQuiz();
 
+  useEffect(() => {
+    // Adding dark mode class to root for the premium styling
+    document.documentElement.classList.add('dark');
+  }, []);
+
   return (
-    // Clean Slate Background
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex items-center justify-center p-4 selection:bg-indigo-100 selection:text-indigo-700">
-      
-      <div className="w-full">
-        {state.status === 'idle' && (
-          <SetupScreen config={config} setConfig={setConfig} onStart={startQuiz} />
-        )}
+    <>
+      {state.status === 'idle' && (
+        <Dashboard 
+          config={config}
+          setConfig={setConfig}
+          startQuiz={startQuiz} 
+        />
+      )}
 
-        {state.status === 'loading' && (
-          <div className="flex flex-col justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-indigo-100 border-t-indigo-600"></div>
-            <p className="mt-4 text-slate-400 font-medium text-sm tracking-wide">PREPARING SESSION...</p>
-          </div>
-        )}
+      {state.status === 'loading' && (
+        <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      )}
 
-        {state.status === 'active' && (
-          <QuizCard 
-            state={state} 
-            config={config} 
-            onSubmit={submitAnswer}
-            onQuit={quitQuiz} 
-          />
-        )}
+      {state.status === 'active' && (
+        <QuizArena 
+          state={state} 
+          config={config} 
+          onSubmit={submitAnswer} 
+          onQuit={quitQuiz} 
+        />
+      )}
 
-        {state.status === 'finished' && (
-          <div className="max-w-md mx-auto bg-white border border-slate-200 p-10 rounded-3xl shadow-xl text-center animate-fade-in-up">
-            <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
-              📊
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Session Complete</h2>
-            <p className="text-slate-500 mb-8">Here is how you performed today.</p>
-            
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Score</div>
-                <div className="text-3xl font-bold text-indigo-600 mt-1">{state.score}</div>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Accuracy</div>
-                <div className="text-3xl font-bold text-slate-700 mt-1">
-                  {Math.round((state.score / config.totalQuestions) * 100)}%
-                </div>
-              </div>
-            </div>
-
-            <button
+      {state.status === 'finished' && (
+        <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark p-4">
+          <div className="text-center bg-white dark:bg-surface-dark p-10 md:p-14 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full">
+            <div className="text-6xl mb-6">🏆</div>
+            <h2 className="text-3xl font-black mb-2 text-slate-900 dark:text-white">Session Complete!</h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-8 font-medium">
+              You correctly answered <span className="text-primary font-bold">{state.score}</span> out of {config.totalQuestions} questions.
+            </p>
+            <button 
               onClick={quitQuiz}
-              className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+              className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-primary/30"
             >
-              Start New Session
+              Return to Dashboard
             </button>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 

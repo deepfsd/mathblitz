@@ -2,29 +2,21 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { QuizConfig, QuizState } from '../types/quiz';
 import { quizApi } from '../api/quizApi';
 
-// --- ROBUST AUDIO CONTROLLER ---
-// Created outside the component so they are preloaded once
-const correctAudio = new Audio('sounds/correct.mp3');
-const incorrectAudio = new Audio('sounds/incorrect.mp3');
+// 1. Direct audio imports (Make sure files are in src/assets/)
+import correctSound from '../assets/correct.mp3';
+import incorrectSound from '../assets/incorrect.mp3';
 
-// Preload the audio files so there is no delay on the first click
-correctAudio.preload = 'auto';
-incorrectAudio.preload = 'auto';
-
+// 2. Brute-force audio player for rapid-fire clicking
 const playSound = (type: 'correct' | 'wrong' | 'timeout') => {
   try {
-    if (type === 'correct') {
-      correctAudio.currentTime = 0; // Reset to start so it fires instantly even if already playing
-      correctAudio.play().catch(e => console.log("Audio blocked by browser:", e));
-    } else {
-      incorrectAudio.currentTime = 0; // Reset to start
-      incorrectAudio.play().catch(e => console.log("Audio blocked by browser:", e));
-    }
+    const audio = new Audio(type === 'correct' ? correctSound : incorrectSound);
+    audio.play().catch((error) => {
+      console.warn("Browser blocked audio. User must click first.", error);
+    });
   } catch (error) {
-    console.error("Audio playback error", error);
+    console.error("Audio system error:", error);
   }
 };
-// -------------------------------
 
 const DEFAULT_CONFIG: QuizConfig = {
   mode: 'multiplication',
@@ -46,10 +38,10 @@ const INITIAL_STATE: QuizState = {
   feedback: 'none',
 };
 
+// THIS IS THE MISSING EXPORT!
 export const useQuiz = () => {
   const [config, setConfig] = useState<QuizConfig>(DEFAULT_CONFIG);
   const [state, setState] = useState<QuizState>(INITIAL_STATE);
-  
   const isFetchingRef = useRef(false);
 
   const nextQuestion = useCallback(async () => {
@@ -58,17 +50,9 @@ export const useQuiz = () => {
       const question = await quizApi.getQuestion(config);
       setState(prev => {
         if (prev.status === 'idle') return prev;
-        
-        return {
-          ...prev,
-          status: 'active',
-          currentQuestion: question,
-          timeLeft: config.timePerQuestion,
-          feedback: 'none'
-        };
+        return { ...prev, status: 'active', currentQuestion: question, timeLeft: config.timePerQuestion, feedback: 'none' };
       });
     } catch (error) {
-      console.error("Failed to load question", error);
       setState(prev => (prev.status !== 'idle' ? { ...prev, status: 'idle' } : prev));
     } finally {
       isFetchingRef.current = false;
@@ -78,121 +62,79 @@ export const useQuiz = () => {
   const startQuiz = useCallback(async () => {
     if (isFetchingRef.current) return; 
     setState({ ...INITIAL_STATE, status: 'loading' });
-    
-    // Trick browsers into unlocking audio context by playing a silent sound on Start
-    incorrectAudio.volume = 0;
-    incorrectAudio.play().then(() => {
-        incorrectAudio.pause();
-        incorrectAudio.currentTime = 0;
-        incorrectAudio.volume = 1;
-    }).catch(() => {});
-
     await nextQuestion();
   }, [nextQuestion]);
 
-  const quitQuiz = useCallback(() => {
-    setState(INITIAL_STATE);
-  }, []);
+  const quitQuiz = useCallback(() => setState(INITIAL_STATE), []);
 
   const submitAnswer = async (answer: number) => {
     if (state.status !== 'active' || !state.currentQuestion) return;
-
     const { numbers } = state.currentQuestion;
     const timeTaken = Number((config.timePerQuestion - state.timeLeft).toFixed(2));
 
     try {
-      const result = await quizApi.checkAnswer(numbers, answer, config.mode);
-      const isCorrect = result.correct;
-      const operator = config.mode === 'addition' ? '+' : '×';
+      const { correct } = await quizApi.checkAnswer(numbers, answer, config.mode);
       
-      const questionString = numbers.join(` ${operator} `);
-
-      // 🔥 FIRE THE SOUND EFFECT INSTANTLY
-      playSound(isCorrect ? 'correct' : 'wrong');
+      // FIRE AUDIO
+      playSound(correct ? 'correct' : 'wrong');
 
       quizApi.saveHistory({
         id: Date.now().toString(),
-        question: questionString,
-        result: isCorrect ? 'correct' : 'wrong',
-        timeTaken: timeTaken,
+        question: numbers.join(config.mode === 'addition' ? ' + ' : ' × '),
+        result: correct ? 'correct' : 'wrong',
+        timeTaken,
         date: new Date().toLocaleDateString('en-GB')
       });
 
       setState(prev => ({
         ...prev,
-        score: isCorrect ? prev.score + 1 : prev.score,
-        streak: isCorrect ? prev.streak + 1 : 0,
-        feedback: isCorrect ? 'correct' : 'wrong'
+        score: correct ? prev.score + 1 : prev.score,
+        streak: correct ? prev.streak + 1 : 0,
+        feedback: correct ? 'correct' : 'wrong'
       }));
 
       setTimeout(() => {
         setState(prev => {
           if (prev.status === 'idle') return prev; 
-
           if (prev.questionCount + 1 >= config.totalQuestions) {
-            return { ...prev, status: 'finished', feedback: 'none' } as QuizState;
-          } else {
-            nextQuestion(); 
-            return { ...prev, questionCount: prev.questionCount + 1 };
+            return { ...prev, status: 'finished', feedback: 'none' };
           }
+          nextQuestion(); 
+          return { ...prev, questionCount: prev.questionCount + 1 };
         });
       }, 300);
-
-    } catch (error) {
-      console.error("Failed to check answer:", error);
-    }
+    } catch (error) {}
   };
 
   useEffect(() => {
     if (state.status !== 'active' || state.feedback !== 'none') return;
-
     const timer = setInterval(() => {
       setState(prev => {
         if (prev.status !== 'active' || prev.feedback !== 'none') {
           clearInterval(timer);
           return prev;
         }
-
         if (prev.timeLeft <= 1) {
           clearInterval(timer);
           return { ...prev, timeLeft: 0, feedback: 'timeout', streak: 0 };
         }
-        
         return { ...prev, timeLeft: prev.timeLeft - 1 };
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, [state.status, state.feedback]);
 
   useEffect(() => {
     if (state.status === 'active' && state.feedback === 'timeout' && state.currentQuestion) {
-      const operator = config.mode === 'addition' ? '+' : '×';
-      
-      // 🔥 FIRE TIMEOUT SOUND
       playSound('timeout');
-
-      quizApi.saveHistory({
-        id: Date.now().toString(),
-        question: state.currentQuestion.numbers.join(` ${operator} `),
-        result: 'timeout',
-        timeTaken: config.timePerQuestion,
-        date: new Date().toLocaleDateString('en-GB')
-      });
-
       const t = setTimeout(() => {
         setState(p => {
           if (p.status === 'idle') return p; 
-          
-          if (p.questionCount + 1 >= config.totalQuestions) {
-             return { ...p, status: 'finished', feedback: 'none' } as QuizState;
-          } else {
-             nextQuestion();
-             return { ...p, questionCount: p.questionCount + 1 };
-          }
+          if (p.questionCount + 1 >= config.totalQuestions) return { ...p, status: 'finished', feedback: 'none' };
+          nextQuestion();
+          return { ...p, questionCount: p.questionCount + 1 };
         });
       }, 300);
-
       return () => clearTimeout(t);
     }
   }, [state.status, state.feedback, state.currentQuestion, config, nextQuestion]);

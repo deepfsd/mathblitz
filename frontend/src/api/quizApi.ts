@@ -48,8 +48,4 @@ export const quizApi = {
     if (updated.length > 50) updated.shift();
     localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   },
-
-  clearHistory: () => {
-    localStorage.removeItem(HISTORY_KEY);
-  }
 };

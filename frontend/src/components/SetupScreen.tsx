@@ -85,12 +85,12 @@ export const SetupScreen: React.FC<Props> = ({ config, setConfig, onStart }) => 
 
       </div>
 
-      <div className="lg:col-span-5">
+      {/* <div className="lg:col-span-5">
         <PerformanceSidebar 
           history={history} 
           onClear={() => { quizApi.clearHistory(); setHistory([]); }} 
         />
-      </div>
+      </div> */}
     </div>
   );
 };
