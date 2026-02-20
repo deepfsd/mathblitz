@@ -1,4 +1,4 @@
-export const playSound = (type: 'correct' | 'wrong') => {
+export const playSound = (type: 'correct' | 'incorrect') => {
   try {
     const audio = new Audio(`/sounds/${type}.mp3`);
     audio.volume = 0.4; // Slightly lower volume for professional feel

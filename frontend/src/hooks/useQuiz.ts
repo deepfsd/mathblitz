@@ -2,6 +2,30 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { QuizConfig, QuizState } from '../types/quiz';
 import { quizApi } from '../api/quizApi';
 
+// --- ROBUST AUDIO CONTROLLER ---
+// Created outside the component so they are preloaded once
+const correctAudio = new Audio('sounds/correct.mp3');
+const incorrectAudio = new Audio('sounds/incorrect.mp3');
+
+// Preload the audio files so there is no delay on the first click
+correctAudio.preload = 'auto';
+incorrectAudio.preload = 'auto';
+
+const playSound = (type: 'correct' | 'wrong' | 'timeout') => {
+  try {
+    if (type === 'correct') {
+      correctAudio.currentTime = 0; // Reset to start so it fires instantly even if already playing
+      correctAudio.play().catch(e => console.log("Audio blocked by browser:", e));
+    } else {
+      incorrectAudio.currentTime = 0; // Reset to start
+      incorrectAudio.play().catch(e => console.log("Audio blocked by browser:", e));
+    }
+  } catch (error) {
+    console.error("Audio playback error", error);
+  }
+};
+// -------------------------------
+
 const DEFAULT_CONFIG: QuizConfig = {
   mode: 'multiplication',
   startTable: 2,
@@ -54,6 +78,15 @@ export const useQuiz = () => {
   const startQuiz = useCallback(async () => {
     if (isFetchingRef.current) return; 
     setState({ ...INITIAL_STATE, status: 'loading' });
+    
+    // Trick browsers into unlocking audio context by playing a silent sound on Start
+    incorrectAudio.volume = 0;
+    incorrectAudio.play().then(() => {
+        incorrectAudio.pause();
+        incorrectAudio.currentTime = 0;
+        incorrectAudio.volume = 1;
+    }).catch(() => {});
+
     await nextQuestion();
   }, [nextQuestion]);
 
@@ -73,6 +106,9 @@ export const useQuiz = () => {
       const operator = config.mode === 'addition' ? '+' : '×';
       
       const questionString = numbers.join(` ${operator} `);
+
+      // 🔥 FIRE THE SOUND EFFECT INSTANTLY
+      playSound(isCorrect ? 'correct' : 'wrong');
 
       quizApi.saveHistory({
         id: Date.now().toString(),
@@ -100,7 +136,7 @@ export const useQuiz = () => {
             return { ...prev, questionCount: prev.questionCount + 1 };
           }
         });
-      }, 1000);
+      }, 300);
 
     } catch (error) {
       console.error("Failed to check answer:", error);
@@ -133,6 +169,9 @@ export const useQuiz = () => {
     if (state.status === 'active' && state.feedback === 'timeout' && state.currentQuestion) {
       const operator = config.mode === 'addition' ? '+' : '×';
       
+      // 🔥 FIRE TIMEOUT SOUND
+      playSound('timeout');
+
       quizApi.saveHistory({
         id: Date.now().toString(),
         question: state.currentQuestion.numbers.join(` ${operator} `),
@@ -152,7 +191,7 @@ export const useQuiz = () => {
              return { ...p, questionCount: p.questionCount + 1 };
           }
         });
-      }, 1500);
+      }, 300);
 
       return () => clearTimeout(t);
     }
